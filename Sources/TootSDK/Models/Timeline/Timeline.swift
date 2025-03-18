@@ -44,4 +44,9 @@ public enum Timeline: Hashable, Sendable {
     public static func user(userID: String) -> Timeline {
         return .user(UserTimelineQuery(userId: userID))
     }
+    
+    /// Global federated timeline. Pixelfed only
+    public static var global: Timeline {
+        return .federated(.globalTimeLineQuery())
+    }
 }
