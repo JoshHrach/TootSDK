@@ -41,7 +41,8 @@ import Testing
         let flavour = TootSDKFlavour.sharkey
         let params = TootNotificationParams(types: [.mention]).corrected(for: flavour)
         #expect(
-            params.excludeTypes == TootNotification.NotificationType.supported(by: flavour).subtracting([.mention]), "Incorrect exclude types for \(flavour)")
+            params.excludeTypes == TootNotification.NotificationType.supported(by: flavour).subtracting([.mention]),
+            "Incorrect exclude types for \(flavour)")
         #expect(params.types == nil, "Incorrect types for \(flavour)")
     }
 
@@ -56,7 +57,8 @@ import Testing
         let flavour = TootSDKFlavour.sharkey
         let params = TootNotificationParams(excludeTypes: [.favourite], types: [.mention]).corrected(for: flavour)
         #expect(
-            params.excludeTypes == TootNotification.NotificationType.supported(by: flavour).subtracting([.mention]), "Incorrect exclude types for \(flavour)")
+            params.excludeTypes == TootNotification.NotificationType.supported(by: flavour).subtracting([.mention]),
+            "Incorrect exclude types for \(flavour)")
         #expect(params.types == nil, "Incorrect types for \(flavour)")
     }
 
@@ -71,7 +73,8 @@ import Testing
         let flavour = TootSDKFlavour.sharkey
         let params = TootNotificationParams(excludeTypes: [.favourite], types: [.mention, .favourite]).corrected(for: flavour)
         #expect(
-            params.excludeTypes == TootNotification.NotificationType.supported(by: flavour).subtracting([.mention]), "Incorrect exclude types for \(flavour)")
+            params.excludeTypes == TootNotification.NotificationType.supported(by: flavour).subtracting([.mention]),
+            "Incorrect exclude types for \(flavour)")
         #expect(params.types == nil, "Incorrect types for \(flavour)")
     }
 
@@ -86,8 +89,10 @@ import Testing
 
     @Test func friendicaQueryParams() throws {
         let flavour = TootSDKFlavour.friendica
-        let client = TootClient(instanceURL: URL(string: "https://mastodon.social")!)
-        client.flavour = flavour
+        let client = TootClient(
+            instanceURL: URL(string: "https://mastodon.social")!,
+            serverConfiguration: ServerConfiguration(flavour: flavour)
+        )
 
         let params = TootNotificationParams(excludeTypes: [.mention], types: [.favourite])
         let query = client.createQuery(from: params).sorted { ($0.name, $0.value ?? "") < ($1.name, $1.value ?? "") }
@@ -102,8 +107,10 @@ import Testing
 
     @Test func sharkeyQueryParams() throws {
         let flavour = TootSDKFlavour.sharkey
-        let client = TootClient(instanceURL: URL(string: "https://mastodon.social")!)
-        client.flavour = flavour
+        let client = TootClient(
+            instanceURL: URL(string: "https://mastodon.social")!,
+            serverConfiguration: ServerConfiguration(flavour: flavour)
+        )
 
         let params = TootNotificationParams(excludeTypes: [.mention], types: [.favourite])
         let query = client.createQuery(from: params).sorted { ($0.name, $0.value ?? "") < ($1.name, $1.value ?? "") }
@@ -111,11 +118,11 @@ import Testing
             query == [
                 URLQueryItem(name: "exclude_types[]", value: "admin.report"),
                 URLQueryItem(name: "exclude_types[]", value: "admin.sign_up"),
-                URLQueryItem(name: "exclude_types[]", value: "emoji_reaction"),
                 URLQueryItem(name: "exclude_types[]", value: "follow"),
                 URLQueryItem(name: "exclude_types[]", value: "follow_request"),
                 URLQueryItem(name: "exclude_types[]", value: "mention"),
                 URLQueryItem(name: "exclude_types[]", value: "poll"),
+                URLQueryItem(name: "exclude_types[]", value: "reaction"),
                 URLQueryItem(name: "exclude_types[]", value: "reblog"),
                 URLQueryItem(name: "exclude_types[]", value: "severed_relationships"),
                 URLQueryItem(name: "exclude_types[]", value: "status"),
@@ -125,8 +132,10 @@ import Testing
 
     @Test func pleromaAkkomaQueryParams() throws {
         for flavour in [TootSDKFlavour.pleroma, .akkoma] {
-            let client = TootClient(instanceURL: URL(string: "https://mastodon.social")!)
-            client.flavour = flavour
+            let client = TootClient(
+                instanceURL: URL(string: "https://mastodon.social")!,
+                serverConfiguration: ServerConfiguration(flavour: flavour)
+            )
 
             let params = TootNotificationParams(excludeTypes: [.mention], types: [.favourite])
             let query = client.createQuery(from: params).sorted { ($0.name, $0.value ?? "") < ($1.name, $1.value ?? "") }
@@ -139,8 +148,10 @@ import Testing
     }
 
     @Test func mastodonQueryParams() throws {
-        let client = TootClient(instanceURL: URL(string: "https://mastodon.social")!)
-        client.flavour = .mastodon
+        let client = TootClient(
+            instanceURL: URL(string: "https://mastodon.social")!,
+            serverConfiguration: ServerConfiguration(flavour: .mastodon)
+        )
 
         let params = TootNotificationParams(excludeTypes: [.mention], types: [.favourite])
         let query = client.createQuery(from: params).sorted { ($0.name, $0.value ?? "") < ($1.name, $1.value ?? "") }

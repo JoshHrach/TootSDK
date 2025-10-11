@@ -182,15 +182,21 @@ public struct InstanceV2: Codable, Hashable, Sendable {
         public var approvalRequired: Bool?
         /// An optional custom message to be shown when registrations are closed.
         public var message: String?
+        /// A minimum age required to register, if configured.
+        public var minAge: Int?
+        /// Whether registrations require the user to provide a reason for joining. Only applicable when ``approvalRequired`` is `true`.
+        public var reasonRequired: Bool?
 
-        public init(enabled: Bool? = nil, approvalRequired: Bool? = nil, message: String? = nil) {
+        public init(enabled: Bool? = nil, approvalRequired: Bool? = nil, message: String? = nil, minAge: Int? = nil, reasonRequired: Bool? = nil) {
             self.enabled = enabled
             self.approvalRequired = approvalRequired
             self.message = message
+            self.minAge = minAge
+            self.reasonRequired = reasonRequired
         }
     }
 
-    public struct APIVersions: Codable, Hashable, Sendable {
+    public struct APIVersions: Codable, Hashable, Sendable, CustomStringConvertible {
         /// Mastodon API version number that this server implements.
         ///
         /// Starting from Mastodon v4.3.0, API changes will come with a version number, which clients can check against this value.
@@ -198,6 +204,14 @@ public struct InstanceV2: Codable, Hashable, Sendable {
 
         public init(mastodon: Int? = nil) {
             self.mastodon = mastodon
+        }
+
+        public var description: String {
+            var versions: [String] = []
+            if let mastodon = mastodon {
+                versions.append("Mastodon API: \(mastodon)")
+            }
+            return versions.isEmpty ? "No API versions" : versions.joined(separator: ", ")
         }
     }
 

@@ -11,16 +11,8 @@ jobs:
   Lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - name: Setup Swift
-        uses: swift-actions/setup-swift@v2
-      - name: Install swift-format
-        run: |
-          VERSION=509.0.0
-          git clone https://github.com/apple/swift-format.git
-          cd swift-format
-          git checkout "tags/$VERSION"
-          swift build -c release
-          sudo mv .build/release/swift-format /usr/local/bin/
-      - name: Run swift-format
+      - uses: actions/checkout@v5
+      - name: Get swift version
+        run: swift --version
+      - name: Lint project
         run: make checklint

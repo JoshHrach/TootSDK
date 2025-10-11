@@ -32,13 +32,18 @@ public struct UpdateCredentialsParams: Codable {
     public let fieldsAttributes: [String: Field]?
     /// An extra entity to be used with API methods to verify credentials and update credentials
     public let source: Source?
+    /// Domains of websites allowed to credit the account in link preview cards.
+    ///
+    /// Only supported if ``InstanceV2/apiVersions-swift.property`` includes ``InstanceV2/APIVersions-swift.struct/mastodon`` API version 3 or higher.
+    public let attributionDomains: [String]?
 
     public init(
         displayName: String? = nil, note: String? = nil, avatar: Data? = nil, avatarMimeType: String? = nil, header: Data? = nil,
         headerMimeType: String? = nil, locked: Bool? = nil, bot: Bool? = nil, discoverable: Bool? = nil, hideCollections: Bool? = nil,
         indexable: Bool? = nil,
         fieldsAttributes: [String: Field]? = nil,
-        source: Source? = nil
+        source: Source? = nil,
+        attributionDomains: [String]? = nil
     ) {
         self.displayName = displayName
         self.note = note
@@ -53,6 +58,7 @@ public struct UpdateCredentialsParams: Codable {
         self.indexable = indexable
         self.fieldsAttributes = fieldsAttributes
         self.source = source
+        self.attributionDomains = attributionDomains
     }
 
     /// Represents a profile field as a name-value pair
@@ -70,12 +76,12 @@ public struct UpdateCredentialsParams: Codable {
 
     public struct Source: Codable, Hashable, Sendable {
         public init(privacy: Post.Visibility? = nil, sensitive: Bool? = nil, language: String? = nil) {
-            self.privacy = privacy
+            self.privacy = .optional(privacy)
             self.sensitive = sensitive
             self.language = language
         }
         /// The default post privacy to be used for new posts.
-        public var privacy: Post.Visibility?
+        public var privacy: OpenEnum<Post.Visibility>?
         /// Whether new posts should be marked sensitive by default.
         public var sensitive: Bool?
         ///  The default posting language for new posts.

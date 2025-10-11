@@ -7,17 +7,19 @@ import Foundation
 public struct TootSource: Codable, Hashable, Sendable {
     public init(
         note: String? = nil, fields: [TootField], privacy: Post.Visibility? = nil, sensitive: Bool? = nil, language: String? = nil,
-        followRequestsCount: Int? = nil, indexable: Bool? = nil, hideCollections: Bool? = nil, discoverable: Bool? = nil
+        followRequestsCount: Int? = nil, indexable: Bool? = nil, hideCollections: Bool? = nil, discoverable: Bool? = nil,
+        attributionDomains: [String]? = nil
     ) {
         self.note = note
         self.fields = fields
-        self.privacy = privacy
+        self.privacy = .optional(privacy)
         self.sensitive = sensitive
         self.language = language
         self.followRequestsCount = followRequestsCount
         self.indexable = indexable
         self.hideCollections = hideCollections
         self.discoverable = discoverable
+        self.attributionDomains = attributionDomains
     }
 
     /// Profile bio.
@@ -25,7 +27,7 @@ public struct TootSource: Codable, Hashable, Sendable {
     /// Metadata about the account.
     public var fields: [TootField]
     /// The default post privacy to be used for new posts.
-    public var privacy: Post.Visibility?
+    public var privacy: OpenEnum<Post.Visibility>?
     /// Whether new posts should be marked sensitive by default.
     public var sensitive: Bool?
     ///  The default posting language for new posts.
@@ -38,4 +40,6 @@ public struct TootSource: Codable, Hashable, Sendable {
     public let hideCollections: Bool?
     /// Whether the account has opted into discovery features such as the profile directory
     public let discoverable: Bool?
+    /// Domains of websites allowed to credit the account in link preview cards.
+    public let attributionDomains: [String]?
 }

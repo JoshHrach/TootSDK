@@ -2,6 +2,7 @@
 // Copyright (c) 2022. All rights reserved.
 
 import Foundation
+import Version
 
 #if canImport(FoundationNetworking)
     import FoundationNetworking
@@ -21,8 +22,28 @@ public class TootClient: @unchecked Sendable {
     public var debugResponses: Bool = false
     /// Set this to `true` to see a `print()` for instance information.
     public var debugInstance: Bool = false
+    /// The server configuration containing flavour, version, and API information
+    public private(set) var serverConfiguration: ServerConfiguration = ServerConfiguration()
+
     /// The preferred fediverse server flavour to use for API calls
-    public var flavour: TootSDKFlavour = .mastodon
+    public var flavour: TootSDKFlavour {
+        serverConfiguration.flavour
+    }
+
+    /// The parsed version of the instance we're connected to (used for feature detection)
+    public var version: Version? {
+        serverConfiguration.version
+    }
+
+    /// The raw version string from the instance (for debugging/display purposes)
+    public var versionString: String? {
+        serverConfiguration.versionString
+    }
+
+    /// The API versions supported by the instance (from InstanceV2 response)
+    public var apiVersions: InstanceV2.APIVersions? {
+        serverConfiguration.apiVersions
+    }
     /// The authorization scopes the client was initialized with
     public let scopes: [String]
     /// Data streams that the client can subscribe to
@@ -87,6 +108,41 @@ public class TootClient: @unchecked Sendable {
         self.clientName = clientName
         self.clientWebsite = clientWebsite
         self.httpUserAgent = httpUserAgent ?? clientName
+    }
+
+    /// Initialize a new instance of `TootClient` with a pre-configured server configuration.
+    ///
+    /// This initializer is useful when caching TootClient instances or when you already know the server configuration
+    /// and don't need to call ``TootClient/connect()``.
+    /// - Parameters:
+    ///   - clientName: Name of the client to be used in outgoing HTTP requests. Defaults to `TootSDK`
+    ///   - clientWebsite: A URL to the homepage of your client. Defaults to an empty string.
+    ///   - session: the URLSession being used internally, defaults to shared
+    ///   - instanceURL: the instance you are connecting to
+    ///   - accessToken: the existing access token; if you already have one
+    ///   - scopes: An array of authentication scopes, defaults to `"read", "write", "follow", "push"`
+    ///   - serverConfiguration: The pre-configured server configuration containing flavour, version, and API information
+    public init(
+        clientName: String = "TootSDK",
+        clientWebsite: String? = nil,
+        session: URLSession = URLSession.shared,
+        instanceURL: URL,
+        accessToken: String? = nil,
+        scopes: [String] = ["read", "write", "follow", "push"],
+        httpUserAgent: String? = nil,
+        serverConfiguration: ServerConfiguration
+    ) {
+        self.session = session
+        self.instanceURL = instanceURL
+        self.accessToken = accessToken
+        self.scopes = scopes
+        self.clientName = clientName
+        self.clientWebsite = clientWebsite
+        self.httpUserAgent = httpUserAgent ?? clientName
+        self.serverConfiguration = serverConfiguration
+
+        // Set the encoder userInfo with the configured flavour
+        self.encoder.userInfo[.tootSDKFlavour] = serverConfiguration.flavour
     }
 
     /// Initialize and connect a new instance of `TootClient`.
@@ -165,6 +221,40 @@ extension TootClient {
 
             throw TootSDKError.decodingError(description)
         }
+    }
+
+    /// Fetch data asynchronously and return both the decoded object and HTTP response metadata.
+    internal func fetchRaw<T: Decodable>(_ decode: T.Type, _ req: HTTPRequestBuilder) async throws -> TootResponse<T> {
+        let (data, response) = try await fetch(req: req)
+
+        let decodedData: T
+        do {
+            decodedData = try decoder.decode(decode, from: data)
+        } catch {
+            let description = fetchError(T.self, data: data)
+
+            if debugResponses {
+                print(description)
+            }
+
+            throw TootSDKError.decodingError(description)
+        }
+
+        // Convert HTTPURLResponse headers to [String: String]
+        var headers: [String: String] = [:]
+        for (key, value) in response.allHeaderFields {
+            if let keyString = key as? String, let valueString = value as? String {
+                headers[keyString] = valueString
+            }
+        }
+
+        return TootResponse(
+            data: decodedData,
+            headers: headers,
+            statusCode: response.statusCode,
+            url: response.url,
+            rawBody: data
+        )
     }
 
     private func fetchError<T: Decodable>(_ decode: T.Type, data: Data) -> String {
@@ -261,7 +351,9 @@ extension TootClient {
     }
 
     internal func requireFeature(_ feature: TootFeature) throws {
-        try requireFlavour(feature.supportedFlavours)
+        if !feature.isSupported(flavour: flavour, version: version, apiVersions: apiVersions) {
+            throw TootSDKError.unsupportedFeature(feature: feature)
+        }
     }
 
     /// Performs a request that returns paginated arrays
@@ -283,6 +375,43 @@ extension TootClient {
         let info = PagedInfo(maxId: previousPage?.maxId, minId: nextPage?.minId, sinceId: nextPage?.sinceId)
 
         return PagedResult(result: decoded, info: info, nextPage: nextPage, previousPage: previousPage)
+    }
+
+    /// Performs a request that returns paginated arrays and HTTP response metadata
+    /// - Parameters:
+    ///   - req: the HTTP request to execute
+    /// - Returns: TootResponse containing the fetched paged array, page info, and HTTP metadata
+    internal func fetchPagedResultRaw<T: Decodable>(_ req: HTTPRequestBuilder) async throws -> TootResponse<PagedResult<[T]>> {
+        let (data, response) = try await fetch(req: req)
+        let decoded = try decode([T].self, from: data)
+        var pagination: Pagination?
+
+        if let links = response.value(forHTTPHeaderField: "Link") {
+            pagination = Pagination(links: links)
+        }
+
+        // Pagination in TootSDK is opposite to pagination in Mastodon
+        let nextPage = pagination?.prev
+        let previousPage = pagination?.next
+        let info = PagedInfo(maxId: previousPage?.maxId, minId: nextPage?.minId, sinceId: nextPage?.sinceId)
+
+        let pagedResult = PagedResult(result: decoded, info: info, nextPage: nextPage, previousPage: previousPage)
+
+        // Convert HTTPURLResponse headers to [String: String]
+        var headers: [String: String] = [:]
+        for (key, value) in response.allHeaderFields {
+            if let keyString = key as? String, let valueString = value as? String {
+                headers[keyString] = valueString
+            }
+        }
+
+        return TootResponse(
+            data: pagedResult,
+            headers: headers,
+            statusCode: response.statusCode,
+            url: response.url,
+            rawBody: data
+        )
     }
 
 }
@@ -383,11 +512,39 @@ extension TootClient {
 extension TootClient {
     /// Uses the currently available credentials to connect to an instance and detect the most compatible server flavour.
     public func connect() async throws {
-        if let flavour = await flavourFromNodeInfo() {
-            self.flavour = flavour
-        } else {
-            self.flavour = try await flavourFromInstanceInfo()
+        let nodeInfo = await getNodeInfoIfAvailable()
+        let instance = try await getInstanceInfo()
+        // Prefer to get flavour and software from node info which is more reliable (Unable to detect GoToSocial using instance version)
+        let detectedFlavour = nodeInfo?.flavour ?? instance.flavour
+        let detectedVersionString = nodeInfo?.software.version ?? instance.version
+        let detectedVersion = TootFeature.parseVersion(from: detectedVersionString)
+        var detectedApiVersions: InstanceV2.APIVersions? = nil
+
+        if let instanceV2 = instance as? InstanceV2 {
+            detectedApiVersions = instanceV2.apiVersions
         }
+
+        if debugInstance {
+            print("🎨 Detected fediverse instance flavour: \(detectedFlavour), version: \(detectedVersionString)")
+            if let detectedApiVersions {
+                print("🎨 Detected API versions: \(detectedApiVersions)")
+            }
+        }
+
+        // Create the new server configuration
+        self.serverConfiguration = ServerConfiguration(
+            flavour: detectedFlavour,
+            version: detectedVersion,
+            versionString: detectedVersionString,
+            apiVersions: detectedApiVersions
+        )
+
+        // Set the encoder userInfo after flavour has been determined
+        encoder.userInfo[.tootSDKFlavour] = serverConfiguration.flavour
+    }
+
+    private func getNodeInfoIfAvailable() async -> NodeInfo? {
+        return try? await getNodeInfo()
     }
 
     private func flavourFromNodeInfo() async -> TootSDKFlavour? {
@@ -418,6 +575,6 @@ extension TootClient {
     /// - Parameter feature: The feature to check if is supported.
     /// - Returns: `true` if the feature is supported.
     public func supportsFeature(_ feature: TootFeature) -> Bool {
-        return feature.supportedFlavours.contains(flavour)
+        return feature.isSupported(flavour: flavour, version: version, apiVersions: apiVersions)
     }
 }

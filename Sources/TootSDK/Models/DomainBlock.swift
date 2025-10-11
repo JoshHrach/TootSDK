@@ -7,7 +7,7 @@ import Foundation
 ///   - silence = Account posts from this domain will be hidden by default
 ///   - suspend = All incoming data from this domain will be rejected
 ///   - noop = Do nothing. Allows for rejecting media or reports
-public enum DomainBlockSeverity: String, Codable, Hashable {
+public enum DomainBlockSeverity: String, Codable, Hashable, Sendable {
     case silence
     ///
     case suspend
@@ -15,7 +15,7 @@ public enum DomainBlockSeverity: String, Codable, Hashable {
 }
 
 /// Represents a domain limited from federating.
-public struct DomainBlock: Codable, Hashable {
+public struct DomainBlock: Codable, Hashable, Sendable {
     /// The ID of the DomainBlock in the database.
     public var id: String?
 
@@ -26,7 +26,7 @@ public struct DomainBlock: Codable, Hashable {
     public var createdAt: Date?
 
     /// The policy to be applied by this domain block.
-    public var severity: DomainBlockSeverity?
+    public var severity: OpenEnum<DomainBlockSeverity>?
 
     /// Whether to reject media attachments from this domain
     public var rejectMedia: Bool?
@@ -67,7 +67,7 @@ public struct DomainBlock: Codable, Hashable {
         self.id = id
         self.domain = domain
         self.createdAt = createdAt
-        self.severity = severity
+        self.severity = .optional(severity)
         self.rejectMedia = rejectMedia
         self.rejectReports = rejectReports
         self.privateComment = privateComment

@@ -37,6 +37,8 @@ public struct TootNotification: Codable, Hashable, Identifiable, Sendable {
     public var report: Report?
     /// Summary of the event that caused follow relationships to be severed. Attached when type of the notification is ``NotificationType/severedRelationships``.
     public var relationshipSeveranceEvent: RelationshipSeveranceEvent?
+    /// The used emoji, available if type is ``NotificationType/emojiReaction`` and flavour provides it.
+    public var emoji: String?
 
     public enum NotificationType: Codable, Hashable, Sendable, CaseIterable, RawRepresentable {
         /// Someone followed you
@@ -77,6 +79,8 @@ public struct TootNotification: Codable, Hashable, Identifiable, Sendable {
 
         public func encode(to encoder: any Encoder) throws {
             var container = encoder.singleValueContainer()
+            let flavour = encoder.userInfo[.tootSDKFlavour] as? TootSDKFlavour ?? .mastodon
+            let rawValue = rawValue(flavour: flavour)
             try container.encode(rawValue)
         }
 
@@ -104,7 +108,7 @@ public struct TootNotification: Codable, Hashable, Identifiable, Sendable {
                 self = .adminReport
             case "severed_relationships":
                 self = .severedRelationships
-            case "emoji_reaction":
+            case "emoji_reaction", "pleroma:emoji_reaction", "reaction":
                 self = .emojiReaction
             case "annual_report":
                 self = .annualReport
@@ -130,6 +134,20 @@ public struct TootNotification: Codable, Hashable, Identifiable, Sendable {
             case .annualReport: return "annual_report"
             case .unknown(let rawValue): return rawValue
             }
+        }
+
+        public func rawValue(flavour: TootSDKFlavour) -> String {
+            if case .emojiReaction = self {
+                switch flavour {
+                case .pleroma, .akkoma:
+                    return "pleroma:emoji_reaction"
+                case .sharkey:
+                    return "reaction"
+                default:
+                    return rawValue
+                }
+            }
+            return rawValue
         }
 
         public static var allCases: [TootNotification.NotificationType] {
@@ -159,7 +177,7 @@ public struct TootNotification: Codable, Hashable, Identifiable, Sendable {
                     .annualReport,
                 ]
             case .pleroma, .akkoma:
-                return [.follow, .mention, .repost, .favourite, .poll, .followRequest, .update]
+                return [.follow, .mention, .repost, .favourite, .poll, .followRequest, .update, .emojiReaction]
             case .friendica:
                 return [.follow, .mention, .repost, .favourite, .poll]
             case .pixelfed:
@@ -179,11 +197,13 @@ public struct TootNotification: Codable, Hashable, Identifiable, Sendable {
         /// Returns push notification types supported by the given `flavour`.
         public static func supportedAsPush(by flavour: TootSDKFlavour) -> Set<NotificationType> {
             switch flavour {
-            case .mastodon:
-                return Set(allCases)
+            case .mastodon, .goToSocial:
+                return [
+                    .follow, .mention, .repost, .favourite, .poll, .followRequest, .post, .update, .adminSignUp, .adminReport,
+                ]
             case .pleroma, .akkoma, .friendica, .sharkey:
                 return [.follow, .mention, .repost, .favourite, .poll]
-            case .pixelfed, .firefish, .goToSocial, .catodon, .iceshrimp:
+            case .pixelfed, .firefish, .catodon, .iceshrimp:
                 return []
             }
         }
@@ -207,6 +227,7 @@ public struct TootNotification: Codable, Hashable, Identifiable, Sendable {
         case post = "status"
         case report
         case relationshipSeveranceEvent = "relationship_severance_event"
+        case emoji
     }
 }
 

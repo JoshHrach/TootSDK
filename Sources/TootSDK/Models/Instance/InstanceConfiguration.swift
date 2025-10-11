@@ -19,15 +19,12 @@ public struct InstanceConfiguration: Codable, Hashable, Sendable {
     ///
     /// Only populated by v2 instance API.
     public var translation: Translation?
-    
+    /// Whether federation is limited to explicitly allowed domains.
+    public var limitedFederation: Bool?
+
     public init(
-        urls: URLs? = nil,
-        vapid: VAPID? = nil,
-        accounts: Accounts? = nil,
-        posts: Posts? = nil,
-        mediaAttachments: MediaAttachments? = nil,
-        polls: Polls? = nil,
-        translation: Translation? = nil
+        urls: URLs? = nil, vapid: VAPID? = nil, accounts: Accounts? = nil, posts: Posts? = nil, mediaAttachments: MediaAttachments? = nil,
+        polls: Polls? = nil, translation: Translation? = nil, limitedFederation: Bool? = nil
     ) {
         self.urls = urls
         self.vapid = vapid
@@ -36,6 +33,7 @@ public struct InstanceConfiguration: Codable, Hashable, Sendable {
         self.mediaAttachments = mediaAttachments
         self.polls = polls
         self.translation = translation
+        self.limitedFederation = limitedFederation
     }
 
     enum CodingKeys: String, CodingKey {
@@ -46,6 +44,7 @@ public struct InstanceConfiguration: Codable, Hashable, Sendable {
         case mediaAttachments
         case polls
         case translation
+        case limitedFederation
     }
 
     public struct URLs: Codable, Hashable, Sendable {
@@ -54,13 +53,24 @@ public struct InstanceConfiguration: Codable, Hashable, Sendable {
 
         /// The server status page. String (URL).
         public var status: String?
-        
+
+        /// The server's about page. String (URL).
+        public var about: String?
+
+        /// The server's privacy policy webpage. String (URL).
+        public var privacyPolicy: String?
+
+        /// The server's terms of service webpage. String (URL).
+        public var termsOfService: String?
+
         public init(
-            streaming: String? = nil,
-            status: String? = nil
+            streaming: String? = nil, status: String? = nil, about: String? = nil, privacyPolicy: String? = nil, termsOfService: String? = nil
         ) {
             self.streaming = streaming
             self.status = status
+            self.about = about
+            self.privacyPolicy = privacyPolicy
+            self.termsOfService = termsOfService
         }
     }
 
@@ -74,11 +84,8 @@ public struct InstanceConfiguration: Codable, Hashable, Sendable {
             case maxFeaturedTags
             case maxPinnedPosts = "maxPinnedStatuses"
         }
-        
-        public init(
-            maxFeaturedTags: Int? = nil,
-            maxPinnedPosts: Int? = nil
-        ) {
+
+        public init(maxFeaturedTags: Int? = nil, maxPinnedPosts: Int? = nil) {
             self.maxFeaturedTags = maxFeaturedTags
             self.maxPinnedPosts = maxPinnedPosts
         }
@@ -91,12 +98,8 @@ public struct InstanceConfiguration: Codable, Hashable, Sendable {
         public var maxMediaAttachments: Int?
         /// Each URL in a post will be assumed to be exactly this many characters.
         public var charactersReservedPerUrl: Int?
-        
-        public init(
-            maxCharacters: Int? = nil,
-            maxMediaAttachments: Int? = nil,
-            charactersReservedPerUrl: Int? = nil
-        ) {
+
+        public init(maxCharacters: Int? = nil, maxMediaAttachments: Int? = nil, charactersReservedPerUrl: Int? = nil) {
             self.maxCharacters = maxCharacters
             self.maxMediaAttachments = maxMediaAttachments
             self.charactersReservedPerUrl = charactersReservedPerUrl
@@ -106,6 +109,8 @@ public struct InstanceConfiguration: Codable, Hashable, Sendable {
     public struct MediaAttachments: Codable, Hashable, Sendable {
         /// Contains MIME types that can be uploaded.
         public var supportedMimeTypes: [String]?
+        /// The maximum size of a description, in characters.
+        public var descriptionLimit: Int?
         /// The maximum size of any uploaded image, in bytes.
         public var imageSizeLimit: Int?
         /// The maximum number of pixels (width times height) for image uploads.
@@ -116,16 +121,13 @@ public struct InstanceConfiguration: Codable, Hashable, Sendable {
         public var videoFrameRateLimit: Int?
         /// The maximum number of pixels (width times height) for video uploads.
         public var videoMatrixLimit: Int?
-        
+
         public init(
-            supportedMimeTypes: [String]? = nil,
-            imageSizeLimit: Int? = nil,
-            imageMatrixLimit: Int? = nil,
-            videoSizeLimit: Int? = nil,
-            videoFrameRateLimit: Int? = nil,
-            videoMatrixLimit: Int? = nil
+            supportedMimeTypes: [String]? = nil, descriptionLimit: Int? = nil, imageSizeLimit: Int? = nil, imageMatrixLimit: Int? = nil,
+            videoSizeLimit: Int? = nil, videoFrameRateLimit: Int? = nil, videoMatrixLimit: Int? = nil
         ) {
             self.supportedMimeTypes = supportedMimeTypes
+            self.descriptionLimit = descriptionLimit
             self.imageSizeLimit = imageSizeLimit
             self.imageMatrixLimit = imageMatrixLimit
             self.videoSizeLimit = videoSizeLimit
@@ -143,13 +145,8 @@ public struct InstanceConfiguration: Codable, Hashable, Sendable {
         public var minExpiration: Int?
         /// The longest allowed poll duration, in seconds.
         public var maxExpiration: Int?
-        
-        public init(
-            maxOptions: Int? = nil,
-            maxCharactersPerOption: Int? = nil,
-            minExpiration: Int? = nil,
-            maxExpiration: Int? = nil
-        ) {
+
+        public init(maxOptions: Int? = nil, maxCharactersPerOption: Int? = nil, minExpiration: Int? = nil, maxExpiration: Int? = nil) {
             self.maxOptions = maxOptions
             self.maxCharactersPerOption = maxCharactersPerOption
             self.minExpiration = minExpiration
@@ -160,10 +157,8 @@ public struct InstanceConfiguration: Codable, Hashable, Sendable {
     public struct Translation: Codable, Hashable, Sendable {
         /// Whether the translation API is available on this instance.
         public var enabled: Bool?
-        
-        public init(
-            enabled: Bool? = nil
-        ) {
+
+        public init(enabled: Bool? = nil) {
             self.enabled = enabled
         }
     }
@@ -173,10 +168,8 @@ public struct InstanceConfiguration: Codable, Hashable, Sendable {
         ///
         /// > SeeAlso: This is the same as ``PushSubscription/serverKey``.
         public var publicKey: String?
-        
-        public init(
-            publicKey: String? = nil
-        ) {
+
+        public init(publicKey: String? = nil) {
             self.publicKey = publicKey
         }
     }

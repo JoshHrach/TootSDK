@@ -6,13 +6,13 @@ import Foundation
 /// Represents a user's preferences.
 public struct Preferences: Codable, Hashable, Sendable {
     /// Default visibility for new posts. Equivalent to Source#privacy.
-    public var postingDefaultVisibility: Post.Visibility
+    public var postingDefaultVisibility: OpenEnum<Post.Visibility>
     /// Default sensitivity flag for new posts. Equivalent to Source#sensitive.
     public var postingDefaultSensitive: Bool
     /// Default language for new posts. Equivalent to Source#language
     public var postingDefaultLanguage: String?
     /// Whether media attachments should be automatically displayed or blurred/hidden.
-    public var readingExpandMedia: ExpandMedia
+    public var readingExpandMedia: OpenEnum<ExpandMedia>
     /// Whether CWs should be expanded by default.
     public var readingExpandSpoilers: Bool
     /// Whether to automatically play animated GIFs.
@@ -31,8 +31,8 @@ public struct Preferences: Codable, Hashable, Sendable {
         /// Hide media marked as sensitive
         case `default`
         /// Always show all media by default, regardless of sensitivity
-        case showAll
+        case showAll = "show_all"
         /// Always hide all media by default, regardless of sensitivity
-        case hideAll
+        case hideAll = "hide_all"
     }
 }

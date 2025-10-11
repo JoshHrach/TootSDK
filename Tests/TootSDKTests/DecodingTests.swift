@@ -27,11 +27,29 @@ final class DecodingTests: XCTestCase {
         try assertDecodes(#"{}"#, as: OptionalElement(nil))
     }
 
+    func testDecodeOpenEnum() throws {
+        try assertDecodes(#""blur""#, as: Filter.Action.blur)
+        try assertDecodes(#""blur""#, as: OpenEnum<Filter.Action>.some(.blur))
+        XCTAssertThrowsError(try decode(#""obfuscate""#, as: Filter.Action.self))
+        try assertDecodes(#""obfuscate""#, as: OpenEnum<Filter.Action>.unparsedByTootSDK(rawValue: "obfuscate"))
+    }
+
+    func testDecodeOpenEnumAsDictionaryKey() throws {
+        try assertDecodes(#"{"home": true}"#, as: [Marker.Timeline.home: true])
+        try assertDecodes(#"{"home": true}"#, as: [OpenEnum<Marker.Timeline>.some(.home): true])
+        XCTAssertThrowsError(try decode(#"{"garden": false}"#, as: [Marker.Timeline: Bool].self))
+        try assertDecodes(#"{"garden": false}"#, as: [OpenEnum<Marker.Timeline>.unparsedByTootSDK(rawValue: "garden"): false])
+    }
+
     private func assertDecodes<T: Equatable & Decodable>(_ json: String, as element: T) throws {
+        let decodedElement = try decode(json, as: T.self)
+        XCTAssertEqual(decodedElement, element)
+    }
+
+    private func decode<T: Equatable & Decodable>(_ json: String, as: T.Type) throws -> T {
         let decoder = JSONDecoder()
         let data = Data(json.utf8)
-        let decodedElement = try decoder.decode(T.self, from: data)
-        XCTAssertEqual(decodedElement, element)
+        return try decoder.decode(T.self, from: data)
     }
 
     struct Element: Decodable, Equatable {
